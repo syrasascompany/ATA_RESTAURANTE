@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema de pedidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;800;900&family=Chivo+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carbon:#14110D; --carbon-2:#1E1913; --carbon-3:#2A231A;
+  --linea:rgba(245,239,228,.10); --texto:#F5EFE4; --humo:#A39685;
+  --brasa:#FF7A18; --maiz:#FFC53D; --verde:#32D583; --rojo:#F0483C; --azul:#5B9DF9;
+  --fuente:'Chivo',system-ui,sans-serif; --mono:'Chivo Mono',ui-monospace,monospace;
+  --curva:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--fuente);background:var(--carbon);color:var(--texto);font-size:16px;
+  line-height:1.5;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,select,textarea{font:inherit;color:var(--texto);background:var(--carbon);
+  border:1.5px solid var(--linea);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brasa)}
+:focus-visible{outline:2px solid var(--brasa);outline-offset:2px}
+
+.barra{flex:none;display:flex;align-items:center;gap:13px;padding:11px 16px;
+  background:var(--carbon-2);border-bottom:1px solid var(--linea)}
+.marca{display:flex;align-items:baseline;gap:8px;margin-right:auto;min-width:0}
+.marca b{font-size:21px;font-weight:900;letter-spacing:-.04em;white-space:nowrap}
+.marca span{font-size:12px;color:var(--humo);white-space:nowrap}
+.roles{display:flex;gap:3px;padding:3px;background:var(--carbon);border-radius:11px;overflow-x:auto}
+.roles button{padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:600;
+  color:var(--humo);white-space:nowrap;transition:background .2s,color .2s;position:relative}
+.roles button[aria-pressed="true"]{background:var(--brasa);color:#20140A}
+.globo{position:absolute;top:2px;right:2px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:999px;background:var(--rojo);color:#fff;font-size:10.5px;font-weight:800;
+  display:none;place-items:center;font-family:var(--mono)}
+.roles button[aria-pressed="true"] .globo{background:#20140A;color:var(--brasa)}
+.reloj{font-family:var(--mono);font-size:14px;color:var(--humo);flex:none}
+
+.escena{flex:1;min-height:0;overflow-y:auto}
+.vista{display:none}.vista.activa{display:block}
+.lienzo{padding:18px;max-width:1200px;margin-inline:auto}
+.titulo-vista{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.sub-vista{font-size:14px;color:var(--humo);margin-bottom:18px}
+.cabezote{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.quien{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--humo)}
+.quien select{width:auto;padding:7px 11px;font-size:13.5px}
+
+.mesas{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:11px}
+.mesa{aspect-ratio:1;border-radius:16px;border:2px solid var(--linea);background:var(--carbon-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:transform .15s var(--curva)}
+.mesa:active{transform:scale(.97)}
+.mesa b{font-size:27px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.mesa .est{font-size:12px;color:var(--humo)}
+.mesa .importe{font-family:var(--mono);font-size:12.5px;opacity:.8}
+.mesa.ocupada{border-color:var(--brasa);background:rgba(255,122,24,.09)}
+.mesa.ocupada .est{color:var(--brasa)}
+.mesa.lista{border-color:var(--verde);background:rgba(50,213,131,.12)}
+.mesa.lista .est{color:var(--verde);font-weight:700}
+
+.hoja{position:fixed;inset:0;z-index:50;background:var(--carbon);display:flex;flex-direction:column}
+.hoja-tapa{flex:none;padding:13px 16px;border-bottom:1px solid var(--linea);
+  display:flex;align-items:center;gap:12px}
+.hoja-tapa b{font-size:19px;font-weight:800}
+.hoja-tapa .apunte{font-size:13px;color:var(--humo);margin-left:auto}
+.volver{width:36px;height:36px;border-radius:10px;background:var(--carbon-2);
+  display:grid;place-items:center;font-size:18px;flex:none}
+.categorias{flex:none;display:flex;gap:6px;padding:11px 16px;overflow-x:auto;
+  border-bottom:1px solid var(--linea)}
+.categorias button{padding:7px 14px;border-radius:999px;font-size:13.5px;font-weight:600;
+  color:var(--humo);background:var(--carbon-2);white-space:nowrap}
+.categorias button[aria-pressed="true"]{background:var(--texto);color:var(--carbon)}
+.platos{flex:1;min-height:0;overflow-y:auto;padding:6px 16px 16px}
+.plato{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linea)}
+.plato-info{flex:1;min-width:0}
+.plato-info b{display:block;font-size:15.5px;font-weight:600}
+.plato-info span{font-family:var(--mono);font-size:13.5px;color:var(--humo)}
+.contador{display:flex;align-items:center;gap:9px;flex:none}
+.contador button{width:36px;height:36px;border-radius:10px;background:var(--carbon-3);
+  font-size:20px;font-weight:600;display:grid;place-items:center}
+.contador button.mas{background:var(--brasa);color:#20140A}
+.contador .cantidad{font-family:var(--mono);font-size:16px;min-width:18px;text-align:center}
+
+.cuenta{flex:none;background:var(--carbon-2);border-top:1px solid var(--linea);padding:13px 16px}
+.llevado{max-height:172px;overflow-y:auto;margin-bottom:11px}
+.linea-item{display:flex;gap:9px;align-items:flex-start;padding:8px 0;font-size:14px;
+  border-bottom:1px solid var(--linea)}
+.linea-item:last-child{border-bottom:0}
+.linea-item .c{font-family:var(--mono);color:var(--brasa);font-weight:600;min-width:24px}
+.linea-item .n{flex:1;min-width:0}
+.linea-item .p{font-family:var(--mono);color:var(--humo)}
+.nota-chip{display:inline-block;margin-top:4px;background:rgba(255,197,61,.14);
+  color:var(--maiz);border-radius:7px;padding:3px 8px;font-size:12.5px}
+.agregar-nota{display:inline-block;margin-top:4px;margin-right:8px;font-size:12.5px;
+  color:var(--azul);text-decoration:underline}
+.cuenta-total{display:flex;align-items:baseline;gap:10px;margin-bottom:11px}
+.cuenta-total span{font-size:13.5px;color:var(--humo)}
+.cuenta-total b{font-family:var(--mono);font-size:25px;font-weight:600;margin-left:auto}
+.enviar{width:100%;padding:15px;border-radius:13px;background:var(--brasa);color:#20140A;
+  font-size:16px;font-weight:800}
+.enviar:disabled{background:var(--carbon-3);color:var(--humo)}
+
+.velo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60}
+.dialogo{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;
+  width:min(420px,92vw);background:var(--carbon-2);border-radius:18px;padding:20px;
+  border:1px solid var(--linea);max-height:88vh;overflow-y:auto}
+.dialogo h3{font-size:18px;font-weight:800;margin-bottom:4px}
+.dialogo .para{font-size:13.5px;color:var(--humo);margin-bottom:15px}
+.rapidas{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.rapidas button{padding:8px 13px;border-radius:999px;font-size:13.5px;font-weight:600;
+  background:var(--carbon-3);color:var(--texto)}
+.rapidas button.puesta{background:var(--maiz);color:#241A03}
+.acciones{display:flex;gap:9px;margin-top:15px}
+.acciones button{flex:1;padding:12px;border-radius:11px;font-size:14.5px;font-weight:700}
+.b-brasa{background:var(--brasa);color:#20140A}
+.b-linea{border:1.5px solid var(--linea);color:var(--humo)}
+
+.comandas{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+.comanda{background:var(--carbon-2);border-radius:14px;overflow:hidden;
+  border-top:5px solid var(--verde);display:flex;flex-direction:column}
+.comanda.media{border-top-color:var(--maiz)}
+.comanda.tarde{border-top-color:var(--rojo)}
+.comanda-tapa{padding:11px 14px;display:flex;align-items:center;gap:9px;
+  border-bottom:1px solid var(--linea)}
+.comanda-mesa{font-size:21px;font-weight:900;letter-spacing:-.03em}
+.etiqueta{font-size:11px;color:var(--humo);background:var(--carbon-3);padding:3px 8px;
+  border-radius:999px}
+.etiqueta.dom{color:var(--azul)}
+.cronometro{font-family:var(--mono);font-size:18px;font-weight:600;margin-left:auto}
+.comanda.media .cronometro{color:var(--maiz)}
+.comanda.tarde .cronometro{color:var(--rojo)}
+.comanda-items{padding:8px 14px;flex:1}
+.item{display:flex;gap:10px;padding:7px 0;align-items:flex-start;width:100%;text-align:left}
+.item .cant{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--brasa);min-width:28px}
+.item .que{font-size:15.5px;font-weight:600;line-height:1.3;flex:1}
+.item .nota{display:block;font-size:13px;color:var(--maiz);font-weight:600;margin-top:2px}
+.item.hecho .que,.item.hecho .cant{opacity:.38}
+.item.hecho .que{text-decoration:line-through}
+.comanda-pie{padding:9px 14px 13px}
+.lista-btn{width:100%;padding:12px;border-radius:11px;background:var(--verde);color:#04291A;
+  font-size:15px;font-weight:800}
+
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:13px}
+.domi{background:var(--carbon-2);border-radius:14px;padding:15px;border-left:4px solid var(--azul)}
+.domi.entregado{border-left-color:var(--verde);opacity:.6}
+.domi-tapa{display:flex;align-items:baseline;gap:9px;margin-bottom:9px}
+.domi-tapa b{font-size:16px;font-weight:700}
+.domi-tapa .hora{font-family:var(--mono);font-size:13px;color:var(--humo);margin-left:auto}
+.domi p{font-size:13.5px;color:var(--humo);margin-bottom:3px}
+.domi .lista-platos{font-size:14px;margin:9px 0;line-height:1.5}
+.pie-tarjeta{display:flex;align-items:center;gap:10px;margin-top:11px}
+.pie-tarjeta .valor{font-family:var(--mono);font-size:17px;font-weight:600;margin-right:auto}
+.chico{padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:700}
+.chico.azul{background:var(--azul);color:#06203F}
+.chico.verde{background:var(--verde);color:#04291A}
+.chico.linea{border:1.5px solid var(--linea);color:var(--humo)}
+
+.cuenta-mesa{background:var(--carbon-2);border-radius:14px;padding:16px}
+.cuenta-mesa h4{font-size:17px;font-weight:800;margin-bottom:3px}
+.cuenta-mesa .abierta{font-size:12.5px;color:var(--humo);margin-bottom:12px}
+.detalle-fila{display:flex;gap:9px;font-size:14px;padding:4px 0;align-items:flex-start}
+.detalle-fila .c{font-family:var(--mono);color:var(--humo);min-width:24px}
+.detalle-fila .n{flex:1}
+.detalle-fila .p{font-family:var(--mono)}
+.detalle-fila .obs{display:block;font-size:12px;color:var(--maiz)}
+.sumas{border-top:1px solid var(--linea);margin-top:10px;padding-top:10px}
+.suma{display:flex;justify-content:space-between;font-size:14px;padding:3px 0;
+  color:var(--humo);font-family:var(--mono)}
+.suma.grande{color:var(--texto);font-size:19px;font-weight:600;padding-top:7px}
+
+.rango{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.rango button{padding:8px 15px;border-radius:10px;font-size:14px;font-weight:600;
+  color:var(--humo);background:var(--carbon-2)}
+.rango button[aria-pressed="true"]{background:var(--texto);color:var(--carbon)}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;
+  margin-bottom:16px}
+.cifra{background:var(--carbon-2);border-radius:14px;padding:16px}
+.cifra span{font-size:13px;color:var(--humo);display:block;margin-bottom:6px}
+.cifra b{font-family:var(--mono);font-size:26px;font-weight:600;display:block;line-height:1}
+.cifra small{font-size:12.5px;color:var(--humo)}
+.cifra.destacada b{color:var(--brasa)}
+.dos-paneles{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.panel{background:var(--carbon-2);border-radius:16px;padding:18px;margin-bottom:14px}
+.panel h3{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.panel h3 .apunte{font-size:12.5px;color:var(--humo);font-weight:400;margin-left:auto}
+.horas{display:flex;align-items:flex-end;gap:5px;height:132px}
+.hora-barra{flex:1;display:flex;flex-direction:column;justify-content:flex-end;
+  align-items:center;gap:6px;height:100%}
+.hora-barra i{width:100%;background:var(--brasa);border-radius:5px 5px 0 0;display:block;
+  min-height:3px;transition:height .5s var(--curva)}
+.hora-barra.pico i{background:var(--maiz)}
+.hora-barra span{font-size:11px;color:var(--humo);font-family:var(--mono)}
+.fila-dato{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--linea)}
+.fila-dato:last-child{border-bottom:0}
+.fila-dato .puesto{font-family:var(--mono);font-size:14px;color:var(--humo);width:20px}
+.fila-dato .nombre{flex:1;font-size:15px;font-weight:600}
+.fila-dato .secundario{font-family:var(--mono);font-size:13.5px;color:var(--humo)}
+.fila-dato .plata{font-family:var(--mono);font-size:14.5px;font-weight:600;min-width:92px;
+  text-align:right}
+.proporcion{height:7px;border-radius:999px;background:var(--carbon-3);overflow:hidden;margin-top:5px}
+.proporcion i{display:block;height:100%;background:var(--brasa);border-radius:999px}
+
+.campo{margin-bottom:14px}
+.campo label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
+.campo .pista{font-size:12.5px;color:var(--humo);margin-top:5px}
+.fila-menu{display:flex;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--linea)}
+.fila-menu input{flex:1}
+.fila-menu input.precio{max-width:120px;font-family:var(--mono)}
+.borrar{width:34px;height:34px;border-radius:9px;background:var(--carbon-3);color:var(--rojo);
+  font-size:17px;flex:none;display:grid;place-items:center}
+.cat-bloque{margin-bottom:20px}
+.cat-bloque .cat-nombre{display:flex;gap:9px;align-items:center;margin-bottom:6px}
+.cat-bloque .cat-nombre input{font-weight:700}
+
+.vacio{padding:50px 20px;text-align:center;color:var(--humo);grid-column:1/-1}
+.vacio b{display:block;font-size:18px;font-weight:600;color:var(--texto);margin-bottom:5px}
+
+.aviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;
+  background:var(--texto);color:var(--carbon);padding:13px 20px;border-radius:999px;
+  font-size:14.5px;font-weight:700;box-shadow:0 12px 30px rgba(0,0,0,.5);opacity:0;
+  pointer-events:none;transition:opacity .25s,transform .25s var(--curva)}
+.aviso.visible{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+#impresion{display:none}
+@media print{
+  body>*{display:none!important}
+  #impresion{display:block!important;color:#000;background:#fff;
+    font-family:'Chivo Mono',monospace;font-size:12px;width:72mm}
+  #impresion h2{font-family:'Chivo',sans-serif;font-size:16px;text-align:center;margin-bottom:2px}
+  #impresion .centro{text-align:center;margin-bottom:9px}
+  #impresion .raya{border-top:1px dashed #000;margin:8px 0}
+  #impresion .r{display:flex;justify-content:space-between;gap:8px}
+  #impresion .obs{padding-left:12px;font-style:italic}
+  #impresion .grande{font-size:15px;font-weight:700;margin-top:4px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:640px){
+  .barra{flex-wrap:wrap;gap:9px}
+  .roles{width:100%}
+  .roles button{flex:1;padding:9px 5px;font-size:12px}
+  .reloj{display:none}
+  .lienzo{padding:14px 12px 50px}
+  .mesas{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:9px}
+}
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <div class="marca"><b id="nombre-negocio">ATA</b><span>Sistema de pedidos</span></div>
+  <div class="roles" role="group" aria-label="Cambiar de vista">
+    <button data-rol="salon" aria-pressed="true">Salón</button>
+    <button data-rol="cocina" aria-pressed="false">Cocina<span class="globo" id="globo-cocina"></span></button>
+    <button data-rol="domicilios" aria-pressed="false">Domicilios<span class="globo" id="globo-domi"></span></button>
+    <button data-rol="caja" aria-pressed="false">Caja</button>
+    <button data-rol="admin" aria-pressed="false">Administración</button>
+    <button data-rol="ajustes" aria-pressed="false">Ajustes</button>
+  </div>
+  <span class="reloj" id="reloj"></span>
+</div>
+
+<div class="escena">
+  <section class="vista activa" id="vista-salon">
+    <div class="lienzo">
+      <div class="cabezote">
+        <h2 class="titulo-vista">Salón</h2>
+        <div class="quien"><label for="mesero">Mesero</label><select id="mesero"></select></div>
+      </div>
+      <p class="sub-vista">Toque una mesa para tomar o agregar al pedido.</p>
+      <div class="mesas" id="mesas"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-cocina">
+    <div class="lienzo">
+      <h2 class="titulo-vista">En preparación</h2>
+      <p class="sub-vista" id="sub-cocina"></p>
+      <div class="comandas" id="comandas"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-domicilios">
+    <div class="lienzo">
+      <h2 class="titulo-vista">Domicilios</h2>
+      <p class="sub-vista">Los pedidos que entran por WhatsApp, con su dirección y su estado.</p>
+      <div class="rejilla" id="domicilios"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-caja">
+    <div class="lienzo">
+      <h2 class="titulo-vista">Cuentas abiertas</h2>
+      <p class="sub-vista">Lo que cada mesa lleva consumido. Se imprime el recibo y se cierra.</p>
+      <div class="rejilla" id="cuentas"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-admin">
+    <div class="lienzo">
+      <div class="cabezote">
+        <h2 class="titulo-vista">Cómo va el negocio</h2>
+        <button class="chico azul" id="imprimir-cierre">Imprimir cierre del día</button>
+      </div>
+      <p class="sub-vista">Sin esperar a cuadrar caja en la noche.</p>
+      <div class="rango" role="group" aria-label="Periodo">
+        <button data-rango="dia" aria-pressed="true">Hoy</button>
+        <button data-rango="semana" aria-pressed="false">Esta semana</button>
+        <button data-rango="mes" aria-pressed="false">Este mes</button>
+      </div>
+      <div class="cifras" id="cifras"></div>
+      <div class="panel">
+        <h3 id="titulo-grafico">Ventas por hora</h3>
+        <div class="horas" id="horas"></div>
+      </div>
+      <div class="dos-paneles">
+        <div class="panel"><h3>Cómo pagaron <span class="apunte" id="apunte-pagos"></span></h3>
+          <div id="pagos"></div></div>
+        <div class="panel"><h3>De dónde salió la venta</h3><div id="canales"></div></div>
+        <div class="panel"><h3>Por categoría</h3><div id="categorias-venta"></div></div>
+        <div class="panel"><h3>Por mesero</h3><div id="por-mesero"></div></div>
+      </div>
+      <div class="panel"><h3>Los que más salen</h3><div id="top-platos"></div></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-ajustes">
+    <div class="lienzo">
+      <h2 class="titulo-vista">Ajustes del negocio</h2>
+      <p class="sub-vista">Todo lo que cambia de un restaurante a otro se configura aquí.</p>
+      <div class="panel">
+        <h3>El negocio</h3>
+        <div class="campo"><label for="cfg-nombre">Nombre</label><input id="cfg-nombre"></div>
+        <div class="campo"><label for="cfg-mesas">Cuántas mesas hay en el salón</label>
+          <input id="cfg-mesas" type="number" min="1" max="60">
+          <p class="pista">Para reducir el número, las mesas que sobren deben estar libres.</p></div>
+        <div class="campo"><label for="cfg-propina">Propina sugerida (%)</label>
+          <input id="cfg-propina" type="number" min="0" max="20"></div>
+        <div class="campo"><label for="cfg-meseros">Meseros, separados por coma</label>
+          <input id="cfg-meseros"></div>
+        <button class="chico azul" id="guardar-negocio">Guardar</button>
+      </div>
+      <div class="panel">
+        <h3>La carta <span class="apunte">Se ve al instante en el salón</span></h3>
+        <div id="editor-menu"></div>
+        <button class="chico linea" id="nueva-categoria" style="margin-top:14px">Agregar categoría</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="hoja" id="hoja" style="display:none">
+  <div class="hoja-tapa">
+    <button class="volver" id="cerrar" aria-label="Volver">←</button>
+    <b id="hoja-titulo">Mesa 1</b>
+    <span class="apunte" id="hoja-apunte"></span>
+  </div>
+  <div class="categorias" id="cat-pedido"></div>
+  <div class="platos" id="platos"></div>
+  <div class="cuenta">
+    <div class="llevado" id="llevado"></div>
+    <div class="cuenta-total"><span id="resumen">Sin nada todavía</span><b id="total">$0</b></div>
+    <button class="enviar" id="enviar" disabled>Enviar a cocina</button>
+  </div>
+</div>
+
+<div class="aviso" id="aviso"></div>
+<div id="dialogos"></div>
+<div id="impresion"></div>
+
+<script>
+/* Valores con los que arranca. En AJUSTES se cambian sin tocar el código. */
+const INICIAL = {
+  negocio: 'ATA', mesas: 12, propina: 10, meseros: ['Juan','Sara','Kevin'],
+  menu: [
+    { categoria:'Para picar', platos:[
+      {nombre:'Alitas BBQ x8',precio:28000},{nombre:'Alitas picantes x8',precio:28000},
+      {nombre:'Papas francesas',precio:12000},{nombre:'Papas con queso y tocineta',precio:18000},
+      {nombre:'Dedos de queso x6',precio:16000},{nombre:'Nachos con carne',precio:24000}]},
+    { categoria:'Hamburguesas', platos:[
+      {nombre:'Hamburguesa clásica',precio:22000},{nombre:'Hamburguesa doble carne',precio:32000},
+      {nombre:'Hamburguesa de pollo',precio:24000},{nombre:'Hamburguesa de la casa',precio:35000}]},
+    { categoria:'Platos fuertes', platos:[
+      {nombre:'Churrasco con papa',precio:42000},{nombre:'Pechuga a la plancha',precio:32000},
+      {nombre:'Costillas BBQ',precio:45000},{nombre:'Mojarra frita',precio:38000},
+      {nombre:'Bandeja de la casa',precio:40000}]},
+    { categoria:'Bebidas', platos:[
+      {nombre:'Gaseosa personal',precio:5000},{nombre:'Jugo natural',precio:8000},
+      {nombre:'Limonada de coco',precio:12000},{nombre:'Cerveza',precio:7000},
+      {nombre:'Agua',precio:4000}]},
+    { categoria:'Postres', platos:[
+      {nombre:'Postre de la casa',precio:14000},{nombre:'Helado',precio:9000}]},
+  ]
+};
+const NOTAS_RAPIDAS = ['Sin cebolla','Sin tomate','Sin salsa','Sin picante',
+  'Término medio','Bien cocido','Para llevar','Aparte'];
+
+let cfg = JSON.parse(JSON.stringify(INICIAL));
+try { const g = localStorage.getItem('pedidos.cfg'); if (g) cfg = JSON.parse(g); } catch(e){}
+function guardarCfg(){ try{ localStorage.setItem('pedidos.cfg', JSON.stringify(cfg)); }catch(e){} }
+
+let precios = {}, categoriaDe = {};
+function indexarMenu(){
+  precios = {}; categoriaDe = {};
+  cfg.menu.forEach(c => c.platos.forEach(p => {
+    precios[p.nombre] = p.precio; categoriaDe[p.nombre] = c.categoria; }));
+}
+indexarMenu();
+
+const plata = n => '$' + Math.round(n).toLocaleString('es-CO');
+const haceMin = m => Date.now() - m * 60000;
+
+let mesas = [];
+function armarMesas(conservar){
+  const antes = conservar ? mesas : [];
+  mesas = Array.from({length: cfg.mesas}, (_, i) =>
+    antes[i] || {numero:i+1, estado:'libre', items:[], desde:null, enviadoEn:null, mesero:null});
+  mesas.forEach((m,i) => m.numero = i+1);
+}
+armarMesas(false);
+
+const cobradas = [];
+
+function sembrar(n, estado, minutos, mesero, items){
+  const m = mesas[n-1]; if(!m) return;
+  m.estado = estado; m.mesero = mesero;
+  m.desde = haceMin(minutos+6); m.enviadoEn = haceMin(minutos); m.items = items;
+}
+sembrar(2,'ocupada',6,'Juan',[
+  {nombre:'Hamburguesa doble carne',cantidad:2,listo:false,nota:'Una sin cebolla'},
+  {nombre:'Papas con queso y tocineta',cantidad:1,listo:true},
+  {nombre:'Cerveza',cantidad:2,listo:true,nota:'Bien frías'}]);
+sembrar(5,'ocupada',13,'Sara',[
+  {nombre:'Churrasco con papa',cantidad:1,listo:false,nota:'Término medio'},
+  {nombre:'Pechuga a la plancha',cantidad:1,listo:false,nota:'Sin sal'},
+  {nombre:'Limonada de coco',cantidad:2,listo:true}]);
+sembrar(9,'ocupada',23,'Kevin',[
+  {nombre:'Costillas BBQ',cantidad:2,listo:false},
+  {nombre:'Alitas BBQ x8',cantidad:1,listo:true,nota:'Sin picante'},
+  {nombre:'Gaseosa personal',cantidad:3,listo:true}]);
+sembrar(7,'lista',4,'Juan',[
+  {nombre:'Mojarra frita',cantidad:2,listo:true},
+  {nombre:'Jugo natural',cantidad:2,listo:true}]);
+sembrar(11,'ocupada',2,'Sara',[
+  {nombre:'Nachos con carne',cantidad:1,listo:false},
+  {nombre:'Hamburguesa de pollo',cantidad:1,listo:false,nota:'Sin cebolla, sin tomate'}]);
+
+const domicilios = [
+  {id:1,cliente:'Laura Restrepo',telefono:'310 445 2210',
+   direccion:'Cra 26 #28-14, barrio Alvernia',minutos:8,estado:'cocina',
+   items:[{nombre:'Hamburguesa de la casa',cantidad:2,nota:'Una sin tomate'},
+          {nombre:'Papas francesas',cantidad:1}]},
+  {id:2,cliente:'Andrés Gil',telefono:'315 778 9032',
+   direccion:'Calle 40 #22-09, Villa Campestre',minutos:21,estado:'camino',
+   items:[{nombre:'Costillas BBQ',cantidad:1},{nombre:'Limonada de coco',cantidad:2}]},
+  {id:3,cliente:'Marcela Ospina',telefono:'320 118 6644',
+   direccion:'Cra 19 #33-52, apto 402',minutos:44,estado:'entregado',
+   items:[{nombre:'Alitas picantes x8',cantidad:2},{nombre:'Cerveza',cantidad:4}]},
+];
+
+const BASE = {
+  dia:{total:1845000,pedidos:47,domicilios:14,propinas:168000,
+    barras:[2,5,9,14,11,6,4,8,16,22,19,7],
+    etiquetas:['11','12','1','2','3','4','5','6','7','8','9','10'],
+    titulo:'Ventas por hora',
+    pagos:[['Efectivo',742000],['Tarjeta',689000],['Transferencia',414000]],
+    canales:[['Salón',1298000],['Domicilio',547000]],
+    categorias:[['Platos fuertes',712000],['Hamburguesas',486000],['Para picar',352000],
+                ['Bebidas',214000],['Postres',81000]],
+    meseros:[['Juan',18,684000],['Sara',16,612000],['Kevin',13,549000]],
+    top:[['Hamburguesa de la casa',18],['Alitas BBQ x8',15],['Costillas BBQ',11],
+         ['Churrasco con papa',9],['Limonada de coco',24]]},
+  semana:{total:11290000,pedidos:296,domicilios:88,propinas:1024000,
+    barras:[12,10,11,14,19,26,22],etiquetas:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+    titulo:'Ventas por día',
+    pagos:[['Efectivo',4284000],['Tarjeta',4516000],['Transferencia',2490000]],
+    canales:[['Salón',8103000],['Domicilio',3187000]],
+    categorias:[['Platos fuertes',4392000],['Hamburguesas',3104000],['Para picar',2186000],
+                ['Bebidas',1128000],['Postres',480000]],
+    meseros:[['Juan',108,4102000],['Sara',102,3894000],['Kevin',86,3294000]],
+    top:[['Hamburguesa de la casa',112],['Alitas BBQ x8',94],['Costillas BBQ',71],
+         ['Hamburguesa doble carne',66],['Papas con queso y tocineta',58]]},
+  mes:{total:46700000,pedidos:1208,domicilios:361,propinas:4210000,
+    barras:[9,11,10,13],etiquetas:['Sem 1','Sem 2','Sem 3','Sem 4'],
+    titulo:'Ventas por semana',
+    pagos:[['Efectivo',17746000],['Tarjeta',18680000],['Transferencia',10274000]],
+    canales:[['Salón',33624000],['Domicilio',13076000]],
+    categorias:[['Platos fuertes',18213000],['Hamburguesas',12871000],['Para picar',9106000],
+                ['Bebidas',4670000],['Postres',1840000]],
+    meseros:[['Juan',442,17012000],['Sara',421,16145000],['Kevin',345,13543000]],
+    top:[['Hamburguesa de la casa',438],['Alitas BBQ x8',392],['Costillas BBQ',286],
+         ['Churrasco con papa',241],['Limonada de coco',612]]},
+};
+
+let mesaAbierta=null, borrador={}, notas={}, catActiva=0, rangoActivo='dia';
+
+document.querySelectorAll('.roles button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.roles button').forEach(o =>
+      o.setAttribute('aria-pressed', String(o===b)));
+    document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
+    document.getElementById('vista-'+b.dataset.rol).classList.add('activa');
+    document.querySelector('.escena').scrollTop = 0;
+    if(b.dataset.rol==='caja') pintarCaja();
+    if(b.dataset.rol==='admin') pintarAdmin();
+    if(b.dataset.rol==='ajustes') pintarAjustes();
+  });
+});
+
+function reloj(){
+  document.getElementById('reloj').textContent =
+    new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+reloj(); setInterval(reloj, 10000);
+
+const totalMesa = m => m.items.reduce((s,i)=> s + (precios[i.nombre]||0)*i.cantidad, 0);
+
+function pintarMeseros(){
+  document.getElementById('mesero').innerHTML =
+    cfg.meseros.map(m => `<option>${m}</option>`).join('');
+}
+
+function pintarMesas(){
+  document.getElementById('mesas').innerHTML = mesas.map(m => {
+    const t = totalMesa(m);
+    const texto = m.estado==='libre' ? 'Libre'
+                : m.estado==='lista' ? 'Lista para servir' : 'Ocupada';
+    return `<button class="mesa ${m.estado!=='libre'?m.estado:''}" data-mesa="${m.numero}">
+      <b>${m.numero}</b><span class="est">${texto}</span>
+      ${t?`<span class="importe">${plata(t)}</span>`:''}</button>`;
+  }).join('');
+  document.querySelectorAll('[data-mesa]').forEach(b =>
+    b.addEventListener('click', () => abrir(Number(b.dataset.mesa))));
+  globos();
+}
+
+function abrir(numero){
+  mesaAbierta = mesas[numero-1];
+  borrador={}; notas={}; catActiva=0;
+  document.getElementById('hoja-titulo').textContent = 'Mesa '+numero;
+  document.getElementById('hoja-apunte').textContent =
+    mesaAbierta.items.length ? 'Ya lleva '+plata(totalMesa(mesaAbierta)) : 'Mesa nueva';
+  document.getElementById('hoja').style.display='flex';
+  pintarCatPedido(); pintarPlatos(); pintarCuenta();
+}
+function cerrar(){ document.getElementById('hoja').style.display='none'; mesaAbierta=null; }
+document.getElementById('cerrar').addEventListener('click', cerrar);
+
+function pintarCatPedido(){
+  document.getElementById('cat-pedido').innerHTML = cfg.menu.map((c,i) =>
+    `<button data-cat="${i}" aria-pressed="${i===catActiva}">${c.categoria}</button>`).join('');
+  document.querySelectorAll('[data-cat]').forEach(b =>
+    b.addEventListener('click', () => { catActiva=Number(b.dataset.cat);
+      pintarCatPedido(); pintarPlatos(); }));
+}
+
+function pintarPlatos(){
+  const cat = cfg.menu[catActiva]; if(!cat) return;
+  document.getElementById('platos').innerHTML = cat.platos.map(p => {
+    const n = borrador[p.nombre]||0;
+    return `<div class="plato">
+      <div class="plato-info"><b>${p.nombre}</b><span>${plata(p.precio)}</span></div>
+      <div class="contador">
+        ${n>0?`<button data-menos="${p.nombre}" aria-label="Quitar uno">−</button>
+               <span class="cantidad">${n}</span>`:''}
+        <button class="mas" data-mas="${p.nombre}" aria-label="Agregar">+</button>
+      </div></div>`;
+  }).join('');
+  document.querySelectorAll('[data-mas]').forEach(b => b.addEventListener('click', () => {
+    borrador[b.dataset.mas] = (borrador[b.dataset.mas]||0)+1;
+    pintarPlatos(); pintarCuenta(); }));
+  document.querySelectorAll('[data-menos]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.menos;
+    if(--borrador[k] <= 0){ delete borrador[k]; delete notas[k]; }
+    pintarPlatos(); pintarCuenta(); }));
+}
+
+function pintarCuenta(){
+  const items = Object.entries(borrador);
+  const unidades = items.reduce((s,[,n])=>s+n,0);
+  const total = items.reduce((s,[k,n])=>s+precios[k]*n,0);
+
+  document.getElementById('llevado').innerHTML = items.length===0
+    ? '<p style="font-size:13.5px;color:var(--humo)">Toque + para agregar platos.</p>'
+    : items.map(([k,n]) => `
+      <div class="linea-item">
+        <span class="c">${n}×</span>
+        <span class="n">${k}<br>
+          ${notas[k] ? `<span class="nota-chip">${notas[k]}</span>
+                        <button class="agregar-nota" data-nota="${k}">cambiar</button>`
+                     : `<button class="agregar-nota" data-nota="${k}">+ nota para cocina</button>`}
+        </span>
+        <span class="p">${plata(precios[k]*n)}</span>
+      </div>`).join('');
+
+  document.querySelectorAll('[data-nota]').forEach(b =>
+    b.addEventListener('click', () => dialogoNota(b.dataset.nota)));
+
+  document.getElementById('resumen').textContent =
+    unidades===0 ? 'Sin nada todavía' : unidades+(unidades===1?' producto':' productos');
+  document.getElementById('total').textContent = plata(total);
+  document.getElementById('enviar').disabled = unidades===0;
+}
+
+function dialogoNota(plato){
+  const actual = notas[plato] || '';
+  const partes = actual ? actual.split(', ').filter(Boolean) : [];
+  const cont = document.getElementById('dialogos');
+
+  cont.innerHTML = `
+    <div class="velo" data-cerrar-dialogo></div>
+    <div class="dialogo" role="dialog" aria-modal="true">
+      <h3>Nota para cocina</h3>
+      <p class="para">${plato}</p>
+      <div class="rapidas">
+        ${NOTAS_RAPIDAS.map(n =>
+          `<button data-rapida="${n}" class="${partes.includes(n)?'puesta':''}">${n}</button>`).join('')}
+      </div>
+      <div class="campo">
+        <label for="nota-libre">O escríbala usted</label>
+        <textarea id="nota-libre" rows="2"
+          placeholder="Ejemplo: la carne bien cocida, la salsa aparte">${
+            partes.filter(p => !NOTAS_RAPIDAS.includes(p)).join(', ')}</textarea>
+      </div>
+      <div class="acciones">
+        <button class="b-linea" data-cerrar-dialogo>Cancelar</button>
+        <button class="b-brasa" id="poner-nota">Poner la nota</button>
+      </div>
+    </div>`;
+
+  const marcadas = new Set(partes.filter(p => NOTAS_RAPIDAS.includes(p)));
+  cont.querySelectorAll('[data-rapida]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.rapida;
+    marcadas.has(v) ? marcadas.delete(v) : marcadas.add(v);
+    b.classList.toggle('puesta');
+  }));
+  cont.querySelectorAll('[data-cerrar-dialogo]').forEach(b =>
+    b.addEventListener('click', () => cont.innerHTML=''));
+  document.getElementById('poner-nota').addEventListener('click', () => {
+    const libre = document.getElementById('nota-libre').value.trim();
+    const todo = [...marcadas, ...(libre?[libre]:[])].join(', ');
+    todo ? notas[plato]=todo : delete notas[plato];
+    cont.innerHTML=''; pintarCuenta();
+  });
+}
+
+document.getElementById('enviar').addEventListener('click', () => {
+  if(!mesaAbierta) return;
+  Object.entries(borrador).forEach(([nombre,cantidad]) =>
+    mesaAbierta.items.push({nombre,cantidad,listo:false,nota:notas[nombre]}));
+  if(!mesaAbierta.desde) mesaAbierta.desde = Date.now();
+  mesaAbierta.estado='ocupada';
+  mesaAbierta.enviadoEn = Date.now();
+  mesaAbierta.mesero = document.getElementById('mesero').value;
+  const n = mesaAbierta.numero;
+  cerrar(); pintarMesas(); pintarCocina();
+  mostrar(`Pedido de la mesa ${n} enviado a cocina`);
+});
+
+function pintarCocina(){
+  const activas = mesas.filter(m => m.estado==='ocupada' && m.items.length);
+  const enCocina = domicilios.filter(d => d.estado==='cocina');
+  const cont = document.getElementById('comandas');
+  const cuantas = activas.length + enCocina.length;
+
+  document.getElementById('sub-cocina').textContent = cuantas===0
+    ? 'Los pedidos aparecen aquí apenas el mesero los envía.'
+    : `${cuantas} ${cuantas===1?'comanda pendiente':'comandas pendientes'} · toque un plato cuando salga.`;
+
+  if(cuantas===0){
+    cont.innerHTML = `<div class="vacio"><b>No hay pedidos pendientes</b>
+      Los pedidos que envíe el mesero aparecen aquí al instante.</div>`;
+    globos(); return;
+  }
+
+  const deMesa = m => {
+    const seg = Math.floor((Date.now()-m.enviadoEn)/1000);
+    const min = Math.floor(seg/60);
+    const clase = min>=20 ? 'tarde' : min>=10 ? 'media' : '';
+    return `<div class="comanda ${clase}">
+      <div class="comanda-tapa">
+        <span class="comanda-mesa">Mesa ${m.numero}</span>
+        <span class="etiqueta">${m.mesero||'Salón'}</span>
+        <span class="cronometro">${String(min).padStart(2,'0')}:${String(seg%60).padStart(2,'0')}</span>
+      </div>
+      <div class="comanda-items">
+        ${m.items.map((i,idx) => `
+          <button class="item ${i.listo?'hecho':''}" data-mesa2="${m.numero}" data-item="${idx}">
+            <span class="cant">${i.cantidad}×</span>
+            <span class="que">${i.nombre}${i.nota?`<span class="nota">${i.nota}</span>`:''}</span>
+          </button>`).join('')}
+      </div>
+      <div class="comanda-pie">
+        <button class="lista-btn" data-lista="${m.numero}">Pedido listo</button>
+      </div></div>`;
+  };
+
+  const deDomi = d => {
+    const clase = d.minutos>=20 ? 'tarde' : d.minutos>=10 ? 'media' : '';
+    return `<div class="comanda ${clase}">
+      <div class="comanda-tapa">
+        <span class="comanda-mesa">Domicilio</span>
+        <span class="etiqueta dom">WhatsApp</span>
+        <span class="cronometro">${String(d.minutos).padStart(2,'0')}:00</span>
+      </div>
+      <div class="comanda-items">
+        ${d.items.map(i => `<div class="item">
+          <span class="cant">${i.cantidad}×</span>
+          <span class="que">${i.nombre}${i.nota?`<span class="nota">${i.nota}</span>`:''}</span>
+        </div>`).join('')}
+      </div>
+      <div class="comanda-pie">
+        <button class="lista-btn" data-domi="${d.id}">Listo para salir</button>
+      </div></div>`;
+  };
+
+  cont.innerHTML = activas.map(deMesa).join('') + enCocina.map(deDomi).join('');
+
+  cont.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => {
+    const m = mesas[Number(b.dataset.mesa2)-1];
+    const it = m.items[Number(b.dataset.item)];
+    it.listo = !it.listo; pintarCocina();
+  }));
+  cont.querySelectorAll('[data-lista]').forEach(b => b.addEventListener('click', () => {
+    const m = mesas[Number(b.dataset.lista)-1];
+    m.estado='lista'; m.items.forEach(i => i.listo=true);
+    pintarCocina(); pintarMesas();
+    mostrar(`Mesa ${m.numero} lista para servir`);
+  }));
+  cont.querySelectorAll('[data-domi]').forEach(b => b.addEventListener('click', () => {
+    const d = domicilios.find(x => x.id===Number(b.dataset.domi));
+    d.estado='camino'; pintarCocina(); pintarDomicilios();
+    mostrar('Domicilio de '+d.cliente.split(' ')[0]+' salió para entrega');
+  }));
+  globos();
+}
+setInterval(() => {
+  if(document.getElementById('vista-cocina').classList.contains('activa')) pintarCocina();
+}, 1000);
+
+function pintarDomicilios(){
+  document.getElementById('domicilios').innerHTML = domicilios.map(d => {
+    const total = d.items.reduce((s,i)=> s+(precios[i.nombre]||0)*i.cantidad, 0);
+    const etiqueta = {cocina:'En cocina',camino:'En camino',entregado:'Entregado'}[d.estado];
+    return `<div class="domi ${d.estado==='entregado'?'entregado':''}">
+      <div class="domi-tapa"><b>${d.cliente}</b><span class="hora">hace ${d.minutos} min</span></div>
+      <p>${d.telefono}</p><p>${d.direccion}</p>
+      <div class="lista-platos">${d.items.map(i=>`${i.cantidad}× ${i.nombre}`).join('<br>')}</div>
+      <div class="pie-tarjeta">
+        <span class="valor">${plata(total)}</span>
+        ${d.estado==='camino'
+          ? `<button class="chico verde" data-entregado="${d.id}">Marcar entregado</button>`
+          : `<span class="chico linea">${etiqueta}</span>`}
+      </div></div>`;
+  }).join('');
+  document.querySelectorAll('[data-entregado]').forEach(b => b.addEventListener('click', () => {
+    domicilios.find(x => x.id===Number(b.dataset.entregado)).estado='entregado';
+    pintarDomicilios(); mostrar('Domicilio entregado');
+  }));
+  globos();
+}
+
+function pintarCaja(){
+  const abiertas = mesas.filter(m => m.estado!=='libre' && m.items.length);
+  const cont = document.getElementById('cuentas');
+  if(!abiertas.length){
+    cont.innerHTML = `<div class="vacio"><b>No hay cuentas abiertas</b>
+      Cuando una mesa pida algo, su cuenta se arma sola aquí.</div>`;
+    return;
+  }
+  cont.innerHTML = abiertas.map(m => {
+    const sub = totalMesa(m);
+    const prop = sub*cfg.propina/100;
+    const min = Math.floor((Date.now()-m.desde)/60000);
+    return `<div class="cuenta-mesa">
+      <h4>Mesa ${m.numero}</h4>
+      <p class="abierta">Abierta hace ${min} min · atiende ${m.mesero||'—'}</p>
+      ${m.items.map(i => `<div class="detalle-fila">
+        <span class="c">${i.cantidad}×</span>
+        <span class="n">${i.nombre}${i.nota?`<span class="obs">${i.nota}</span>`:''}</span>
+        <span class="p">${plata(precios[i.nombre]*i.cantidad)}</span></div>`).join('')}
+      <div class="sumas">
+        <div class="suma"><span>Consumo</span><span>${plata(sub)}</span></div>
+        <div class="suma"><span>Propina ${cfg.propina}%</span><span>${plata(prop)}</span></div>
+        <div class="suma grande"><span>Total</span><span>${plata(sub+prop)}</span></div>
+      </div>
+      <div class="acciones">
+        <button class="b-linea" data-recibo="${m.numero}">Ver recibo</button>
+        <button class="b-brasa" data-cobrar="${m.numero}">Cobrar</button>
+      </div></div>`;
+  }).join('');
+
+  cont.querySelectorAll('[data-recibo]').forEach(b => b.addEventListener('click', () =>
+    imprimirRecibo(mesas[Number(b.dataset.recibo)-1], null)));
+  cont.querySelectorAll('[data-cobrar]').forEach(b => b.addEventListener('click', () =>
+    dialogoCobro(mesas[Number(b.dataset.cobrar)-1])));
+}
+
+function dialogoCobro(m){
+  const sub = totalMesa(m);
+  const prop = sub*cfg.propina/100;
+  const cont = document.getElementById('dialogos');
+  cont.innerHTML = `
+    <div class="velo" data-cerrar-dialogo></div>
+    <div class="dialogo" role="dialog" aria-modal="true">
+      <h3>Cobrar la mesa ${m.numero}</h3>
+      <p class="para">${plata(sub+prop)} con propina · ${plata(sub)} sin propina</p>
+      <div class="campo"><label for="metodo">Cómo paga</label>
+        <select id="metodo"><option>Efectivo</option><option>Tarjeta</option>
+          <option>Transferencia</option></select></div>
+      <div class="campo"><label><input type="checkbox" id="con-propina" checked
+        style="width:auto;margin-right:7px">Incluir la propina sugerida</label></div>
+      <div class="acciones">
+        <button class="b-linea" data-cerrar-dialogo>Cancelar</button>
+        <button class="b-brasa" id="confirmar-cobro">Cobrar e imprimir</button>
+      </div>
+    </div>`;
+  cont.querySelectorAll('[data-cerrar-dialogo]').forEach(b =>
+    b.addEventListener('click', () => cont.innerHTML=''));
+  document.getElementById('confirmar-cobro').addEventListener('click', () => {
+    const metodo = document.getElementById('metodo').value;
+    const propina = document.getElementById('con-propina').checked ? prop : 0;
+    cobradas.push({mesa:m.numero, mesero:m.mesero, items:[...m.items],
+      consumo:sub, propina, metodo, hora:new Date()});
+    imprimirRecibo({...m, items:[...m.items]}, {metodo, propina});
+    m.estado='libre'; m.items=[]; m.desde=null; m.enviadoEn=null; m.mesero=null;
+    cont.innerHTML='';
+    pintarCaja(); pintarMesas(); pintarCocina();
+    mostrar(`Mesa ${m.numero} cobrada · ${plata(sub+propina)} en ${metodo.toLowerCase()}`);
+  });
+}
+
+function imprimirRecibo(m, pago){
+  const sub = m.items.reduce((s,i)=> s+precios[i.nombre]*i.cantidad, 0);
+  const prop = pago ? pago.propina : sub*cfg.propina/100;
+  const ahora = new Date();
+  document.getElementById('impresion').innerHTML = `
+    <h2>${cfg.negocio}</h2>
+    <div class="centro">Mesa ${m.numero}<br>
+      ${ahora.toLocaleDateString('es-CO')} ${ahora.toLocaleTimeString('es-CO',
+        {hour:'2-digit',minute:'2-digit'})}<br>Atendió: ${m.mesero||'—'}</div>
+    <div class="raya"></div>
+    ${m.items.map(i => `
+      <div class="r"><span>${i.cantidad}× ${i.nombre}</span>
+        <span>${plata(precios[i.nombre]*i.cantidad)}</span></div>
+      ${i.nota?`<div class="obs">${i.nota}</div>`:''}`).join('')}
+    <div class="raya"></div>
+    <div class="r"><span>Consumo</span><span>${plata(sub)}</span></div>
+    ${prop>0?`<div class="r"><span>Propina ${cfg.propina}%</span><span>${plata(prop)}</span></div>`:''}
+    <div class="r grande"><span>TOTAL</span><span>${plata(sub+prop)}</span></div>
+    ${pago?`<div class="raya"></div>
+      <div class="r"><span>Pagó con</span><span>${pago.metodo}</span></div>`:''}
+    <div class="raya"></div>
+    <div class="centro">¡Gracias por visitarnos!</div>`;
+  window.print();
+}
+
+document.querySelectorAll('.rango button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.rango button').forEach(o =>
+    o.setAttribute('aria-pressed', String(o===b)));
+  rangoActivo = b.dataset.rango; pintarAdmin();
+}));
+
+function conSesion(base){
+  if(rangoActivo!=='dia') return base;
+  const extra = cobradas.reduce((s,c)=>s+c.consumo,0);
+  if(!extra) return base;
+  const propinas = cobradas.reduce((s,c)=>s+c.propina,0);
+
+  const pagos = base.pagos.map(([n,v]) => [n,
+    v + cobradas.filter(c=>c.metodo===n).reduce((s,c)=>s+c.consumo,0)]);
+
+  const cats = {};
+  base.categorias.forEach(([n,v]) => cats[n]=v);
+  cobradas.forEach(c => c.items.forEach(i => {
+    const cat = categoriaDe[i.nombre] || 'Otros';
+    cats[cat] = (cats[cat]||0) + precios[i.nombre]*i.cantidad;
+  }));
+
+  const mes = {};
+  base.meseros.forEach(([n,p,v]) => mes[n]=[p,v]);
+  cobradas.forEach(c => {
+    const k = c.mesero || '—';
+    mes[k] = [(mes[k]?.[0]||0)+1, (mes[k]?.[1]||0)+c.consumo];
+  });
+
+  return {...base,
+    total: base.total+extra,
+    pedidos: base.pedidos+cobradas.length,
+    propinas: base.propinas+propinas,
+    pagos,
+    canales: base.canales.map(([n,v]) => [n, n==='Salón' ? v+extra : v]),
+    categorias: Object.entries(cats).sort((a,b)=>b[1]-a[1]),
+    meseros: Object.entries(mes).map(([n,[p,v]])=>[n,p,v]).sort((a,b)=>b[2]-a[2])};
+}
+
+function barras(lista, total){
+  return lista.map(([nombre,valor]) => `
+    <div class="fila-dato" style="display:block">
+      <div style="display:flex;gap:12px;align-items:center">
+        <span class="nombre">${nombre}</span>
+        <span class="secundario">${Math.round(valor/total*100)}%</span>
+        <span class="plata">${plata(valor)}</span>
+      </div>
+      <div class="proporcion"><i style="width:${valor/total*100}%"></i></div>
+    </div>`).join('');
+}
+
+function pintarAdmin(){
+  const d = conSesion(BASE[rangoActivo]);
+  const ocupadas = mesas.filter(m => m.estado!=='libre').length;
+  const ticket = Math.round(d.total/d.pedidos);
+
+  document.getElementById('cifras').innerHTML = `
+    <div class="cifra destacada"><span>Vendido</span><b>${plata(d.total)}</b></div>
+    <div class="cifra"><span>Pedidos</span><b>${d.pedidos}</b>
+      <small>${d.domicilios} a domicilio</small></div>
+    <div class="cifra"><span>Ticket promedio</span><b>${plata(ticket)}</b></div>
+    <div class="cifra"><span>Propinas</span><b>${plata(d.propinas)}</b>
+      <small>para repartir</small></div>
+    <div class="cifra"><span>Mesas ocupadas</span><b>${ocupadas}</b>
+      <small>de ${cfg.mesas} en el salón</small></div>`;
+
+  document.getElementById('titulo-grafico').textContent = d.titulo;
+  const pico = Math.max(...d.barras);
+  document.getElementById('horas').innerHTML = d.barras.map((v,i) =>
+    `<div class="hora-barra ${v===pico?'pico':''}">
+      <i style="height:${Math.round(v/pico*100)}%"></i>
+      <span>${d.etiquetas[i]}</span></div>`).join('');
+
+  const tp = d.pagos.reduce((s,[,v])=>s+v,0);
+  document.getElementById('apunte-pagos').textContent = plata(tp);
+  document.getElementById('pagos').innerHTML = barras(d.pagos, tp);
+
+  const tc = d.canales.reduce((s,[,v])=>s+v,0);
+  document.getElementById('canales').innerHTML = barras(d.canales, tc);
+
+  const tcat = d.categorias.reduce((s,[,v])=>s+v,0);
+  document.getElementById('categorias-venta').innerHTML = barras(d.categorias, tcat);
+
+  document.getElementById('por-mesero').innerHTML = d.meseros.map(([n,p,v],i) =>
+    `<div class="fila-dato"><span class="puesto">${i+1}</span>
+      <span class="nombre">${n}</span><span class="secundario">${p} pedidos</span>
+      <span class="plata">${plata(v)}</span></div>`).join('');
+
+  document.getElementById('top-platos').innerHTML = d.top.map(([n,veces],i) =>
+    `<div class="fila-dato"><span class="puesto">${i+1}</span>
+      <span class="nombre">${n}</span><span class="secundario">${veces}</span>
+      <span class="plata">${plata((precios[n]||0)*veces)}</span></div>`).join('');
+}
+
+document.getElementById('imprimir-cierre').addEventListener('click', () => {
+  const d = conSesion(BASE.dia);
+  const ahora = new Date();
+  document.getElementById('impresion').innerHTML = `
+    <h2>${cfg.negocio}</h2>
+    <div class="centro">CIERRE DEL DÍA<br>${ahora.toLocaleDateString('es-CO')} ·
+      ${ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="raya"></div>
+    <div class="r"><span>Pedidos</span><span>${d.pedidos}</span></div>
+    <div class="r"><span>A domicilio</span><span>${d.domicilios}</span></div>
+    <div class="r grande"><span>VENDIDO</span><span>${plata(d.total)}</span></div>
+    <div class="raya"></div><div class="centro">Cómo pagaron</div>
+    ${d.pagos.map(([n,v]) => `<div class="r"><span>${n}</span><span>${plata(v)}</span></div>`).join('')}
+    <div class="raya"></div><div class="centro">Por categoría</div>
+    ${d.categorias.map(([n,v]) => `<div class="r"><span>${n}</span><span>${plata(v)}</span></div>`).join('')}
+    <div class="raya"></div><div class="centro">Por mesero</div>
+    ${d.meseros.map(([n,p,v]) => `<div class="r"><span>${n} (${p})</span>
+      <span>${plata(v)}</span></div>`).join('')}
+    <div class="raya"></div>
+    <div class="r"><span>Propinas</span><span>${plata(d.propinas)}</span></div>
+    <div class="raya"></div>
+    <div class="centro">Sistema de pedidos · ${cfg.negocio}</div>`;
+  window.print();
+});
+
+function pintarAjustes(){
+  document.getElementById('cfg-nombre').value = cfg.negocio;
+  document.getElementById('cfg-mesas').value = cfg.mesas;
+  document.getElementById('cfg-propina').value = cfg.propina;
+  document.getElementById('cfg-meseros').value = cfg.meseros.join(', ');
+  pintarEditorMenu();
+}
+
+document.getElementById('guardar-negocio').addEventListener('click', () => {
+  cfg.negocio = document.getElementById('cfg-nombre').value.trim() || 'Mi restaurante';
+  cfg.propina = Math.max(0, Number(document.getElementById('cfg-propina').value)||0);
+  cfg.meseros = document.getElementById('cfg-meseros').value
+    .split(',').map(s=>s.trim()).filter(Boolean);
+  if(!cfg.meseros.length) cfg.meseros = ['Mesero'];
+
+  const nuevas = Math.max(1, Math.min(60, Number(document.getElementById('cfg-mesas').value)||1));
+  if(nuevas < cfg.mesas && mesas.slice(nuevas).some(m => m.estado!=='libre')){
+    mostrar('Primero cobre las mesas que va a quitar');
+    document.getElementById('cfg-mesas').value = cfg.mesas;
+    return;
+  }
+  cfg.mesas = nuevas; armarMesas(true);
+
+  guardarCfg();
+  document.getElementById('nombre-negocio').textContent = cfg.negocio;
+  document.title = cfg.negocio + ' — Sistema de pedidos';
+  pintarMeseros(); pintarMesas();
+  mostrar('Ajustes guardados');
+});
+
+function pintarEditorMenu(){
+  document.getElementById('editor-menu').innerHTML = cfg.menu.map((c,ci) => `
+    <div class="cat-bloque">
+      <div class="cat-nombre">
+        <input value="${c.categoria}" data-catnombre="${ci}">
+        <button class="borrar" data-borrarcat="${ci}" aria-label="Quitar categoría">×</button>
+      </div>
+      ${c.platos.map((p,pi) => `
+        <div class="fila-menu">
+          <input value="${p.nombre}" data-plato="${ci}-${pi}">
+          <input class="precio" type="number" step="500" value="${p.precio}" data-precio="${ci}-${pi}">
+          <button class="borrar" data-borrarplato="${ci}-${pi}" aria-label="Quitar plato">×</button>
+        </div>`).join('')}
+      <button class="chico linea" data-nuevoplato="${ci}" style="margin-top:9px">Agregar plato</button>
+    </div>`).join('');
+
+  const ed = document.getElementById('editor-menu');
+  ed.querySelectorAll('[data-catnombre]').forEach(i => i.addEventListener('change', () => {
+    cfg.menu[Number(i.dataset.catnombre)].categoria = i.value.trim()||'Sin nombre'; aplicarMenu(); }));
+  ed.querySelectorAll('[data-plato]').forEach(i => i.addEventListener('change', () => {
+    const [ci,pi] = i.dataset.plato.split('-').map(Number);
+    cfg.menu[ci].platos[pi].nombre = i.value.trim()||'Sin nombre'; aplicarMenu(); }));
+  ed.querySelectorAll('[data-precio]').forEach(i => i.addEventListener('change', () => {
+    const [ci,pi] = i.dataset.precio.split('-').map(Number);
+    cfg.menu[ci].platos[pi].precio = Math.max(0, Number(i.value)||0); aplicarMenu(); }));
+  ed.querySelectorAll('[data-nuevoplato]').forEach(b => b.addEventListener('click', () => {
+    cfg.menu[Number(b.dataset.nuevoplato)].platos.push({nombre:'Plato nuevo',precio:10000});
+    aplicarMenu(); pintarEditorMenu(); }));
+  ed.querySelectorAll('[data-borrarplato]').forEach(b => b.addEventListener('click', () => {
+    const [ci,pi] = b.dataset.borrarplato.split('-').map(Number);
+    cfg.menu[ci].platos.splice(pi,1); aplicarMenu(); pintarEditorMenu(); }));
+  ed.querySelectorAll('[data-borrarcat]').forEach(b => b.addEventListener('click', () => {
+    if(cfg.menu.length===1){ mostrar('Debe quedar al menos una categoría'); return; }
+    cfg.menu.splice(Number(b.dataset.borrarcat),1); aplicarMenu(); pintarEditorMenu(); }));
+}
+
+document.getElementById('nueva-categoria').addEventListener('click', () => {
+  cfg.menu.push({categoria:'Categoría nueva', platos:[{nombre:'Plato nuevo',precio:10000}]});
+  aplicarMenu(); pintarEditorMenu();
+});
+
+function aplicarMenu(){ indexarMenu(); guardarCfg(); catActiva=0; pintarMesas(); }
+
+function globos(){
+  const enCocina = mesas.filter(m => m.estado==='ocupada' && m.items.length).length
+                 + domicilios.filter(d => d.estado==='cocina').length;
+  const abiertos = domicilios.filter(d => d.estado!=='entregado').length;
+  const g1 = document.getElementById('globo-cocina');
+  const g2 = document.getElementById('globo-domi');
+  g1.textContent = enCocina||''; g1.style.display = enCocina ? 'grid':'none';
+  g2.textContent = abiertos||''; g2.style.display = abiertos ? 'grid':'none';
+}
+
+let t;
+function mostrar(texto){
+  const el = document.getElementById('aviso');
+  el.textContent = texto; el.classList.add('visible');
+  clearTimeout(t); t = setTimeout(() => el.classList.remove('visible'), 2600);
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'){
+    document.getElementById('dialogos').innerHTML='';
+    if(mesaAbierta) cerrar();
+  }
+});
+
+document.getElementById('nombre-negocio').textContent = cfg.negocio;
+document.title = cfg.negocio + ' — Sistema de pedidos';
+pintarMeseros(); pintarMesas(); pintarCocina(); pintarDomicilios(); pintarCaja(); pintarAdmin();
+</script>
+</body>
+</html>
